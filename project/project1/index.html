@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="author" content="Gregory Estrera" />
+    
+    <link rel="shortcut icon" type="image/x-icon" href="../../img/favicon.ico">
+    <title>Project 1</title>
+    <meta name="generator" content="Hugo 0.79.0" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="../../css/main.css" />
+    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,400,200bold,400old" />
+    
+    <!--[if lt IE 9]>
+			<script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+			<script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+		<![endif]-->
+
+    
+  </head>
+
+  <body>
+    <div id="wrap">
+      
+      <nav class="navbar navbar-default">
+  <div class="container">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="../../"><i class="fa fa-home"></i></a>
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+    </div>
+    <div class="navbar-collapse collapse" id="navbar">
+      <ul class="nav navbar-nav navbar-right">
+      
+        
+        <li><a href="../../post/">BLOG</a></li>
+        
+        <li><a href="../../projects/">PROJECTS</a></li>
+        
+        <li><a href="../../resume/">RESUME</a></li>
+        
+      
+      </ul>
+    </div>
+  </div>
+</nav>
+
+      <div class="container">
+        <div class="blog-post">
+          <h3>
+            <strong><a href="../../project/project1/">Project 1</a></strong>
+          </h3>
+        </div>
+ 
+<div class="blog-title">
+          <h4>
+         October 5, 2020 
+            &nbsp;&nbsp;
+            
+          </h4>
+        </div>
+
+        <div class="panel panel-default">
+          <div class="panel-body">
+            <div class="blogpost">
+              
+<script src="../../rmarkdown-libs/htmlwidgets/htmlwidgets.js"></script>
+<script src="../../rmarkdown-libs/plotly-binding/plotly.js"></script>
+<script src="../../rmarkdown-libs/typedarray/typedarray.min.js"></script>
+<script src="../../rmarkdown-libs/jquery/jquery.min.js"></script>
+<link href="../../rmarkdown-libs/crosstalk/css/crosstalk.css" rel="stylesheet" />
+<script src="../../rmarkdown-libs/crosstalk/js/crosstalk.min.js"></script>
+<link href="../../rmarkdown-libs/plotly-htmlwidgets-css/plotly-htmlwidgets.css" rel="stylesheet" />
+<script src="../../rmarkdown-libs/plotly-main/plotly-latest.min.js"></script>
+
+
+<p><img src="../../img/tim_duncan.jpg" /> <img src="../../img/tim_duncan.jpg" /> <img src="../../img/tim_duncan.jpg" /></p>
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>The datasets utilized for this project include a variety of information and statistics about the NBA Draft classes of 2014 and 2015. The dataset titled “nba_draft_2015” was found within the “Fivethirtyeight” package on r and displays theoretical statistical data on members of the 2001-2015 NBA draft classes. Data includes probability on becoming a superstar, starter, role player, and bust among other pieces of information. The other dataset titled “nba_draftclass_2014_2015_stats” contains the current career statistics of the players from the 2014 and 2015 NBA draft classes. This data includes player statistics such as points, games played, minutes played, assists, rebounds, etc. The dataset was compiled from the basketball reference website. <a href="https://www.basketball-reference.com/">Link</a></p>
+<p>These datasets intrigued me because basketball is one of my favorite sports to play and to watch. Also, the datasets chosen display information on how the NBA analytical team rated players in the past compared to how those players ended up performing in the future. By dissecting the overlapping players we can see how accurate the predictions were and if any of these predictions were relatively correct or flat out wrong.</p>
+<div id="libraries" class="section level3">
+<h3>Libraries</h3>
+<p>This section contains a record of the packages and datasets used for this project.</p>
+<pre class="r"><code>library(tidyverse)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(cluster)
+library(viridis)
+library(GGally)
+library(plotly)
+library(&quot;fivethirtyeight&quot;)
+data(&quot;nba_draft_2015&quot;)
+nba_draftclass_2014_2015_stats &lt;- read.csv(&quot;~/Website/content/project/nba_draftclass_2014_2015_stats.csv&quot;)</code></pre>
+</div>
+</div>
+<div id="untidyingtidying" class="section level1">
+<h1>Untidying/Tidying</h1>
+<p>The datasets used were already tidy so the following section displays the practice of untidying and tidying.</p>
+<pre class="r"><code>untidy_nba_draft_2015 &lt;- nba_draft_2015 %&gt;% pivot_wider(names_from = projected_spm, 
+    values_from = position)</code></pre>
+<p>Pivoting wider took an already tidy data set and proceed to create new column based off of the values in the &quot;projected_spm&quot; column, filling the values with the positions of the players</p>
+<pre class="r"><code>tidy1 = untidy_nba_draft_2015 %&gt;% pivot_longer(cols = -(player:bust), 
+    names_to = &quot;projected_spm&quot;)
+glimpse(tidy1)</code></pre>
+<pre><code>## Rows: 1,188,100
+## Columns: 9
+## $ player        &lt;chr&gt; &quot;Karl-Anthony Towns&quot;, &quot;Karl-Anthony Towns&quot;, &quot;Karl-Antho…
+## $ id            &lt;chr&gt; &quot;karl-anthony-towns&quot;, &quot;karl-anthony-towns&quot;, &quot;karl-antho…
+## $ draft_year    &lt;int&gt; 2015, 2015, 2015, 2015, 2015, 2015, 2015, 2015, 2015, 2…
+## $ superstar     &lt;dbl&gt; 0.1347667, 0.1347667, 0.1347667, 0.1347667, 0.1347667, …
+## $ starter       &lt;dbl&gt; 0.4271833, 0.4271833, 0.4271833, 0.4271833, 0.4271833, …
+## $ role_player   &lt;dbl&gt; 0.1630833, 0.1630833, 0.1630833, 0.1630833, 0.1630833, …
+## $ bust          &lt;dbl&gt; 0.2749667, 0.2749667, 0.2749667, 0.2749667, 0.2749667, …
+## $ projected_spm &lt;chr&gt; &quot;1.030605703&quot;, &quot;0.875328997&quot;, &quot;0.679493305&quot;, &quot;0.5216612…
+## $ value         &lt;chr&gt; &quot;C&quot;, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA…</code></pre>
+<pre class="r"><code>tidy2 = na.omit(tidy1)
+names(tidy2)[9] &lt;- &quot;position&quot;</code></pre>
+<p>To reverse the untidying step, I needed to conduct a pivot longer to remove the excess columns created from the previous step. By pivoting all columns except those from players:bust, and naming this new column &quot;projected_spm&quot;, I was able to re-tidy the data. Na.omit removed the many na values created from consecutive pivoting and a simple name() function renamed the values column created from pivoting longer.</p>
+<pre class="r"><code>untidy_nba_draft_2014_2015_stats &lt;- nba_draftclass_2014_2015_stats %&gt;% 
+    pivot_wider(names_from = Rk, values_from = Pk)
+tidy3 = untidy_nba_draft_2014_2015_stats %&gt;% pivot_longer(cols = -(Tm:VORP), 
+    names_to = &quot;Rk&quot;)
+glimpse(tidy3)</code></pre>
+<pre><code>## Rows: 7,200
+## Columns: 22
+## $ Tm      &lt;fct&gt; MIN, MIN, MIN, MIN, MIN, MIN, MIN, MIN, MIN, MIN, MIN, MIN, M…
+## $ Player  &lt;fct&gt; Karl-Anthony Towns, Karl-Anthony Towns, Karl-Anthony Towns, K…
+## $ College &lt;fct&gt; Kentucky, Kentucky, Kentucky, Kentucky, Kentucky, Kentucky, K…
+## $ Yrs     &lt;int&gt; 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5…
+## $ G       &lt;int&gt; 358, 358, 358, 358, 358, 358, 358, 358, 358, 358, 358, 358, 3…
+## $ MP      &lt;int&gt; 12307, 12307, 12307, 12307, 12307, 12307, 12307, 12307, 12307…
+## $ PTS     &lt;int&gt; 8113, 8113, 8113, 8113, 8113, 8113, 8113, 8113, 8113, 8113, 8…
+## $ TRB     &lt;int&gt; 4209, 4209, 4209, 4209, 4209, 4209, 4209, 4209, 4209, 4209, 4…
+## $ AST     &lt;int&gt; 992, 992, 992, 992, 992, 992, 992, 992, 992, 992, 992, 992, 9…
+## $ FG.     &lt;dbl&gt; 0.534, 0.534, 0.534, 0.534, 0.534, 0.534, 0.534, 0.534, 0.534…
+## $ X3P.    &lt;dbl&gt; 0.396, 0.396, 0.396, 0.396, 0.396, 0.396, 0.396, 0.396, 0.396…
+## $ FT.     &lt;dbl&gt; 0.831, 0.831, 0.831, 0.831, 0.831, 0.831, 0.831, 0.831, 0.831…
+## $ MP.1    &lt;dbl&gt; 34.4, 34.4, 34.4, 34.4, 34.4, 34.4, 34.4, 34.4, 34.4, 34.4, 3…
+## $ PTS.1   &lt;dbl&gt; 22.7, 22.7, 22.7, 22.7, 22.7, 22.7, 22.7, 22.7, 22.7, 22.7, 2…
+## $ TRB.1   &lt;dbl&gt; 11.8, 11.8, 11.8, 11.8, 11.8, 11.8, 11.8, 11.8, 11.8, 11.8, 1…
+## $ AST.1   &lt;dbl&gt; 2.8, 2.8, 2.8, 2.8, 2.8, 2.8, 2.8, 2.8, 2.8, 2.8, 2.8, 2.8, 2…
+## $ WS      &lt;dbl&gt; 50.4, 50.4, 50.4, 50.4, 50.4, 50.4, 50.4, 50.4, 50.4, 50.4, 5…
+## $ WS.48   &lt;dbl&gt; 0.197, 0.197, 0.197, 0.197, 0.197, 0.197, 0.197, 0.197, 0.197…
+## $ BPM     &lt;dbl&gt; 4.8, 4.8, 4.8, 4.8, 4.8, 4.8, 4.8, 4.8, 4.8, 4.8, 4.8, 4.8, 4…
+## $ VORP    &lt;dbl&gt; 21.1, 21.1, 21.1, 21.1, 21.1, 21.1, 21.1, 21.1, 21.1, 21.1, 2…
+## $ Rk      &lt;chr&gt; &quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;4&quot;, &quot;5&quot;, &quot;6&quot;, &quot;7&quot;, &quot;8&quot;, &quot;9&quot;, &quot;10&quot;, &quot;11&quot;, &quot;12&quot;…
+## $ value   &lt;int&gt; 1, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA…</code></pre>
+<pre class="r"><code>tidy4 = na.omit(tidy3)
+names(tidy4)[22] &lt;- &quot;Pk&quot;</code></pre>
+<p>I conducted a similar process on the other dataset.</p>
+</div>
+<div id="joining" class="section level1">
+<h1>Joining</h1>
+<p>When joining my two data sets, I chose to use a left join. The left join is designed to merge the datasets only on values present in the dataset on the &quot;left&quot;. For me, this was the &quot;tidy4&quot; dataset based off of the career statistics for players from the 2014 and 2015 NBA draft classes. The left join was necessary because the &quot;right&quot; dataset, based off of the NBA draft classes from 2001-2015 contained too many players that would not be present in the &quot;left&quot; dataset.</p>
+<p>Essentially, all players from the 2001-2013 NBA draft classes were dropped because they were not included in the statistics dataset. This would prevent the creation of many new columns that would not contain any data.</p>
+<pre class="r"><code>full_data &lt;- left_join(tidy4, tidy2, by = c(Player = &quot;player&quot;))</code></pre>
+<div id="cleaning-up-columns" class="section level3">
+<h3>Cleaning up columns</h3>
+<p>The two datasets chosen contained many numerical and categorical variables that made them overwhelming to work with. In order to make working with the data more managable, I narrowed down the scope of the data, only choosing the columns that interested me.</p>
+<pre class="r"><code>full_data[13:16] &lt;- NULL
+full_data[17] &lt;- NULL
+full_data[18:19] &lt;- NULL
+full_data[4] &lt;- NULL
+full_data[19:21] &lt;- NULL
+full_data = na.omit(full_data)
+names(full_data)[19] &lt;- &quot;Position&quot;
+full_data[9:11] &lt;- NULL
+full_data[12:13] &lt;- NULL
+full_data &lt;- full_data[c(1, 2, 3, 14, 4, 5, 6, 7, 8, 9, 10, 11, 
+    12, 13)]</code></pre>
+</div>
+</div>
+<div id="wrangling" class="section level1">
+<h1>Wrangling</h1>
+<pre class="r"><code># creation of per game statistics
+full_data &lt;- full_data %&gt;% mutate(ppg = PTS/G)
+full_data &lt;- full_data %&gt;% mutate(mpg = MP/G)
+full_data &lt;- full_data %&gt;% mutate(rpg = TRB/G)
+full_data &lt;- full_data %&gt;% mutate(apg = AST/G)
+full_data[5:9] &lt;- NULL</code></pre>
+<p>I mutated four new columns pased off of per game statistics.</p>
+<pre class="r"><code># statistic leaders/losers per game
+full_data %&gt;% filter(mpg == max(mpg)) %&gt;% select(Player, mpg)</code></pre>
+<pre><code>## # A tibble: 1 x 2
+##   Player           mpg
+##   &lt;chr&gt;          &lt;dbl&gt;
+## 1 Andrew Wiggins  35.8</code></pre>
+<pre class="r"><code>full_data %&gt;% filter(mpg == min(mpg)) %&gt;% select(Player, mpg)</code></pre>
+<pre><code>## # A tibble: 1 x 2
+##   Player       mpg
+##   &lt;chr&gt;      &lt;dbl&gt;
+## 1 Russ Smith  4.85</code></pre>
+<pre class="r"><code>full_data %&gt;% filter(ppg == max(ppg)) %&gt;% select(Player, ppg)</code></pre>
+<pre><code>## # A tibble: 1 x 2
+##   Player        ppg
+##   &lt;chr&gt;       &lt;dbl&gt;
+## 1 Joel Embiid  23.9</code></pre>
+<pre class="r"><code>full_data %&gt;% filter(ppg == min(ppg)) %&gt;% select(Player, ppg)</code></pre>
+<pre><code>## # A tibble: 1 x 2
+##   Player       ppg
+##   &lt;chr&gt;      &lt;dbl&gt;
+## 1 Russ Smith  1.96</code></pre>
+<pre class="r"><code>full_data %&gt;% filter(apg == max(apg)) %&gt;% select(Player, apg)</code></pre>
+<pre><code>## # A tibble: 1 x 2
+##   Player          apg
+##   &lt;chr&gt;         &lt;dbl&gt;
+## 1 Elfrid Payton  6.63</code></pre>
+<pre class="r"><code>full_data %&gt;% filter(apg == min(apg)) %&gt;% select(Player, apg)</code></pre>
+<pre><code>## # A tibble: 1 x 2
+##   Player             apg
+##   &lt;chr&gt;            &lt;dbl&gt;
+## 1 Chris McCullough 0.254</code></pre>
+<pre class="r"><code>full_data %&gt;% filter(rpg == max(rpg)) %&gt;% select(Player, rpg)</code></pre>
+<pre><code>## # A tibble: 1 x 2
+##   Player               rpg
+##   &lt;chr&gt;              &lt;dbl&gt;
+## 1 Karl-Anthony Towns  11.8</code></pre>
+<pre class="r"><code>full_data %&gt;% filter(rpg == min(rpg)) %&gt;% select(Player, rpg)</code></pre>
+<pre><code>## # A tibble: 1 x 2
+##   Player       rpg
+##   &lt;chr&gt;      &lt;dbl&gt;
+## 1 Russ Smith 0.556</code></pre>
+<p>I found the statistic leaders and loser for the newly created per game statistics. The mpg leader is Andrew Wiggins with 35.78 minutes per game. The ppg leader is joel embiid with 23.95 points per game. The apg leader is Elfrid Payton with 6.63 assist per game. The rpg leader is Kat with 11.76 rebounds per game. Russ Smith was at the bottom of mpg, ppg, and rpg with 4.85, 1.96, 0.56 respectively. Chris McCullough was the bottom of apg with 0.25 assist per game.</p>
+<pre class="r"><code># superstar probability
+full_data %&gt;% filter(superstar == max(superstar)) %&gt;% select(Player, 
+    superstar)</code></pre>
+<pre><code>## # A tibble: 1 x 2
+##   Player       superstar
+##   &lt;chr&gt;            &lt;dbl&gt;
+## 1 Marcus Smart     0.164</code></pre>
+<pre class="r"><code># starter probability
+full_data %&gt;% filter(starter == max(starter)) %&gt;% select(Player, 
+    starter)</code></pre>
+<pre><code>## # A tibble: 1 x 2
+##   Player          starter
+##   &lt;chr&gt;             &lt;dbl&gt;
+## 1 Justise Winslow   0.511</code></pre>
+<p>I then found the players with the highest probability of becoming a superstar and starter. Marcus Smart had the highest probability of becoming a superstar with a 16.35% chance. Justise Winslow had the highest probilibty of becoming a starter with a 51.09% chance.</p>
+<pre class="r"><code># Players per college
+full_data %&gt;% group_by(College) %&gt;% select(Player) %&gt;% summarise_all(n_distinct) %&gt;% 
+    arrange(desc(Player))</code></pre>
+<pre><code>## # A tibble: 37 x 2
+##    College    Player
+##    &lt;fct&gt;       &lt;int&gt;
+##  1 Kentucky        7
+##  2 Duke            5
+##  3 UCLA            5
+##  4 Arizona         4
+##  5 Louisville      3
+##  6 Stanford        3
+##  7 Syracuse        3
+##  8 Kansas          2
+##  9 LSU             2
+## 10 Michigan        2
+## # … with 27 more rows</code></pre>
+<p>I found the number of players hailing from each college and ranked them in descending order.</p>
+<pre class="r"><code># Players per Team
+full_data %&gt;% group_by(Tm) %&gt;% select(Player) %&gt;% summarise_all(n_distinct) %&gt;% 
+    arrange(desc(Player))</code></pre>
+<pre><code>## # A tibble: 29 x 2
+##    Tm    Player
+##    &lt;fct&gt;  &lt;int&gt;
+##  1 PHI        7
+##  2 BOS        5
+##  3 MIA        4
+##  4 MIL        4
+##  5 PHO        4
+##  6 CHH        3
+##  7 CLE        3
+##  8 DET        3
+##  9 HOU        3
+## 10 MIN        3
+## # … with 19 more rows</code></pre>
+<p>I found the sum of the of players each team drafted in the 2014 and 2015 drafts.</p>
+<pre class="r"><code># mean statistics for the players from a specific college,
+# all players coming from the 2014 or 2015 NBA draft
+full_data %&gt;% group_by(College) %&gt;% summarize(mean_ppg = mean(ppg, 
+    na.rm = T)) %&gt;% arrange(desc(mean_ppg))</code></pre>
+<pre><code>## # A tibble: 37 x 2
+##    College      mean_ppg
+##    &lt;fct&gt;           &lt;dbl&gt;
+##  1 Kansas          21.8 
+##  2 NC State        15.5 
+##  3 Missouri        14.8 
+##  4 Colorado        12.9 
+##  5 Texas           12.7 
+##  6 Kentucky        12.5 
+##  7 LA-Lafayette    11.0 
+##  8 Duke            10.6 
+##  9 Arkansas        10.2 
+## 10 Tennessee        9.63
+## # … with 27 more rows</code></pre>
+<pre class="r"><code>full_data %&gt;% group_by(College) %&gt;% summarize(mean_mpg = mean(mpg, 
+    na.rm = T)) %&gt;% arrange(desc(mean_mpg))</code></pre>
+<pre><code>## # A tibble: 37 x 2
+##    College        mean_mpg
+##    &lt;fct&gt;             &lt;dbl&gt;
+##  1 Kansas             33.1
+##  2 LA-Lafayette       29.3
+##  3 NC State           28.8
+##  4 Texas              28.3
+##  5 Missouri           27.0
+##  6 Colorado           25.7
+##  7 Duke               24.6
+##  8 Kentucky           24.0
+##  9 Oklahoma State     22.4
+## 10 Tennessee          22.2
+## # … with 27 more rows</code></pre>
+<pre class="r"><code>full_data %&gt;% group_by(College) %&gt;% summarize(mean_apg = mean(apg, 
+    na.rm = T)) %&gt;% arrange(desc(mean_apg))</code></pre>
+<pre><code>## # A tibble: 37 x 2
+##    College        mean_apg
+##    &lt;fct&gt;             &lt;dbl&gt;
+##  1 LA-Lafayette       6.63
+##  2 Colorado           4.98
+##  3 Utah               2.88
+##  4 Kansas             2.73
+##  5 Oklahoma State     2.61
+##  6 Missouri           2.57
+##  7 Murray State       2.52
+##  8 UConn              2.46
+##  9 Kentucky           2.28
+## 10 Duke               2.24
+## # … with 27 more rows</code></pre>
+<pre class="r"><code>full_data %&gt;% group_by(College) %&gt;% summarize(mean_rpg = mean(rpg, 
+    na.rm = T)) %&gt;% arrange(desc(mean_rpg))</code></pre>
+<pre><code>## # A tibble: 37 x 2
+##    College       mean_rpg
+##    &lt;fct&gt;            &lt;dbl&gt;
+##  1 Kansas            7.91
+##  2 Texas             6.65
+##  3 Arkansas          5.94
+##  4 Kentucky          5.41
+##  5 Indiana           5.20
+##  6 Bowling Green     4.99
+##  7 LA-Lafayette      4.40
+##  8 Arizona           4.17
+##  9 NC State          4.14
+## 10 Duke              4.11
+## # … with 27 more rows</code></pre>
+<p>I found the mean statistics of all the players from a specific college and grouped by that college.</p>
+<pre class="r"><code># max statistics for players from a specific team, all
+# players coming from the 2014 or 2015 NBA draft
+full_data %&gt;% group_by(Tm) %&gt;% summarize(max(ppg))</code></pre>
+<pre><code>## # A tibble: 29 x 2
+##    Tm    `max(ppg)`
+##    &lt;fct&gt;      &lt;dbl&gt;
+##  1 ATL         4.01
+##  2 BOS         9.85
+##  3 BRK         4.79
+##  4 CHH         7.73
+##  5 CHI        12.1 
+##  6 CHO         9.77
+##  7 CLE        19.7 
+##  8 DAL         5.23
+##  9 DEN         8.22
+## 10 DET        12.9 
+## # … with 19 more rows</code></pre>
+<pre class="r"><code>full_data %&gt;% group_by(Tm) %&gt;% summarize(max(mpg))</code></pre>
+<pre><code>## # A tibble: 29 x 2
+##    Tm    `max(mpg)`
+##    &lt;fct&gt;      &lt;dbl&gt;
+##  1 ATL         13.1
+##  2 BOS         28.9
+##  3 BRK         15.7
+##  4 CHH         18.7
+##  5 CHI         29.0
+##  6 CHO         21.9
+##  7 CLE         35.8
+##  8 DAL         13.1
+##  9 DEN         19.9
+## 10 DET         25.7
+## # … with 19 more rows</code></pre>
+<pre class="r"><code>full_data %&gt;% group_by(Tm) %&gt;% summarize(max(apg))</code></pre>
+<pre><code>## # A tibble: 29 x 2
+##    Tm    `max(apg)`
+##    &lt;fct&gt;      &lt;dbl&gt;
+##  1 ATL        0.617
+##  2 BOS        4.06 
+##  3 BRK        1.27 
+##  4 CHH        2.46 
+##  5 CHI        2.12 
+##  6 CHO        1.64 
+##  7 CLE        3.55 
+##  8 DAL        0.668
+##  9 DEN        0.846
+## 10 DET        4.98 
+## # … with 19 more rows</code></pre>
+<pre class="r"><code>full_data %&gt;% group_by(Tm) %&gt;% summarize(max(rpg))</code></pre>
+<pre><code>## # A tibble: 29 x 2
+##    Tm    `max(rpg)`
+##    &lt;fct&gt;      &lt;dbl&gt;
+##  1 ATL         2.94
+##  2 BOS         3.73
+##  3 BRK         2.78
+##  4 CHH         5.20
+##  5 CHI         5.94
+##  6 CHO         4.04
+##  7 CLE         4.35
+##  8 DAL         2.54
+##  9 DEN         2.20
+## 10 DET         3.23
+## # … with 19 more rows</code></pre>
+<p>I grouped by team and then found the highest per game statistics per team.</p>
+<pre class="r"><code># All players who have averaged greater than 10 ppg, 3 apg,
+# 2rpg
+full_data %&gt;% group_by(Player) %&gt;% select(Tm, Player, ppg, apg, 
+    rpg, Position, superstar) %&gt;% filter(ppg &gt; 10) %&gt;% filter(apg &gt; 
+    3) %&gt;% filter(rpg &gt; 2)</code></pre>
+<pre><code>## # A tibble: 5 x 7
+## # Groups:   Player [5]
+##   Tm    Player              ppg   apg   rpg Position superstar
+##   &lt;fct&gt; &lt;chr&gt;             &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;        &lt;dbl&gt;
+## 1 PHO   Devin Booker       22.5  4.71  3.63 SG         0.0734 
+## 2 PHI   Joel Embiid        23.9  3.11 11.5  C          0.148  
+## 3 PHI   Elfrid Payton      11.0  6.63  4.40 PG         0.0192 
+## 4 MIN   Zach LaVine        17.7  3.61  3.62 PG         0.0328 
+## 5 DET   Spencer Dinwiddie  12.9  4.98  2.76 PG         0.00680</code></pre>
+<p>I grouped by player and found the individuals who averaged 10 points per game, 3 assist per game, and 2 rebounds per game over their careers.</p>
+<pre class="r"><code># All players with a superstar probability of 8% or higher
+full_data %&gt;% group_by(Player) %&gt;% select(Player, superstar, 
+    ppg, apg, rpg, Position) %&gt;% filter(superstar &gt; 0.08) %&gt;% 
+    arrange(desc(superstar))</code></pre>
+<pre><code>## # A tibble: 9 x 6
+## # Groups:   Player [9]
+##   Player             superstar   ppg   apg   rpg Position
+##   &lt;chr&gt;                  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;   
+## 1 Marcus Smart          0.164   9.85 4.06   3.57 PG      
+## 2 Joel Embiid           0.148  23.9  3.11  11.5  C       
+## 3 Karl-Anthony Towns    0.135  22.7  2.77  11.8  C       
+## 4 Andrew Wiggins        0.110  19.7  2.35   4.35 SG      
+## 5 Noah Vonleh           0.099   4.96 0.764  5.20 PF      
+## 6 Aaron Gordon          0.0966 12.8  2.39   6.42 PF      
+## 7 Jabari Parker         0.0885 14.9  2.08   5.73 SF      
+## 8 Justise Winslow       0.0835  9.05 2.73   5.37 SF      
+## 9 Julius Randle         0.0822 16.1  2.79   9    PF</code></pre>
+<p>I grouped by Player, and chose those who had an 8% probability of becoming a superstar, then ranked the players by their superstar rating.</p>
+<pre class="r"><code># Position leaders in ppg, apg, rpg
+full_data %&gt;% group_by(Position) %&gt;% select(Player, Position, 
+    ppg) %&gt;% top_n(1, ppg)</code></pre>
+<pre><code>## # A tibble: 5 x 3
+## # Groups:   Position [5]
+##   Player        Position   ppg
+##   &lt;chr&gt;         &lt;chr&gt;    &lt;dbl&gt;
+## 1 Devin Booker  SG        22.5
+## 2 Joel Embiid   C         23.9
+## 3 Julius Randle PF        16.1
+## 4 Zach LaVine   PG        17.7
+## 5 T.J. Warren   SF        15.5</code></pre>
+<pre class="r"><code>full_data %&gt;% group_by(Position) %&gt;% select(Player, Position, 
+    apg) %&gt;% top_n(1, apg)</code></pre>
+<pre><code>## # A tibble: 5 x 3
+## # Groups:   Position [5]
+##   Player          Position   apg
+##   &lt;chr&gt;           &lt;chr&gt;    &lt;dbl&gt;
+## 1 Justise Winslow SF        2.73
+## 2 Devin Booker    SG        4.71
+## 3 Joel Embiid     C         3.11
+## 4 Julius Randle   PF        2.79
+## 5 Elfrid Payton   PG        6.63</code></pre>
+<pre class="r"><code>full_data %&gt;% group_by(Position) %&gt;% select(Player, Position, 
+    rpg) %&gt;% top_n(1, rpg)</code></pre>
+<pre><code>## # A tibble: 5 x 3
+## # Groups:   Position [5]
+##   Player             Position   rpg
+##   &lt;chr&gt;              &lt;chr&gt;    &lt;dbl&gt;
+## 1 Karl-Anthony Towns C        11.8 
+## 2 Andrew Wiggins     SG        4.35
+## 3 Jabari Parker      SF        5.73
+## 4 Julius Randle      PF        9   
+## 5 Elfrid Payton      PG        4.40</code></pre>
+<p>I grouped by position and found the statistic leaders in ppg, apg, and rpg.</p>
+<pre class="r"><code># Median Statistics of Players with a superstar value &gt; 8%
+full_data %&gt;% filter(superstar &gt; 0.08) %&gt;% summarize(med.ppg = median(ppg), 
+    med.apg = median(apg), med.rpg = median(rpg))</code></pre>
+<pre><code>## # A tibble: 1 x 3
+##   med.ppg med.apg med.rpg
+##     &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;
+## 1    14.9    2.73    5.73</code></pre>
+<p>I filtered my data by selecting only players with a 8% probability of becoming a superstar, then found the median per game statistics for those players.</p>
+<pre class="r"><code># Eeach teams highest probability of being a superstar player
+# for each position
+full_data %&gt;% group_by(Tm, Position) %&gt;% select(Player, Tm, Position, 
+    superstar) %&gt;% top_n(1, superstar)</code></pre>
+<pre><code>## # A tibble: 57 x 4
+## # Groups:   Tm, Position [57]
+##    Player              Tm    Position superstar
+##    &lt;chr&gt;               &lt;fct&gt; &lt;chr&gt;        &lt;dbl&gt;
+##  1 Karl-Anthony Towns  MIN   C          0.135  
+##  2 Willie Cauley-Stein SAC   C          0.0471 
+##  3 Stanley Johnson     DET   SF         0.0678 
+##  4 Frank Kaminsky      CHO   C          0.00672
+##  5 Justise Winslow     MIA   SF         0.0835 
+##  6 Myles Turner        IND   PF         0.0294 
+##  7 Trey Lyles          UTA   PF         0.0224 
+##  8 Devin Booker        PHO   SG         0.0734 
+##  9 Cameron Payne       OKC   PG         0.00953
+## 10 Rashad Vaughn       MIL   SG         0.0207 
+## # … with 47 more rows</code></pre>
+<p>I found the players with the highest probability of becoming a superstar with the limit of one player per position per team.</p>
+<pre class="r"><code># Correlation Matrix
+cormat &lt;- full_data %&gt;% select_if(is.numeric) %&gt;% cor(use = &quot;pair&quot;)</code></pre>
+<p>I created correlation matrix based off of all the numeric values in my dataset.</p>
+</div>
+<div id="visualization" class="section level1">
+<h1>Visualization</h1>
+<pre class="r"><code># Correlation Heatmap
+tidycor &lt;- cormat %&gt;% as.data.frame %&gt;% rownames_to_column(&quot;var1&quot;) %&gt;% 
+    pivot_longer(-1, names_to = &quot;var2&quot;, values_to = &quot;correlation&quot;)
+
+tidycor %&gt;% ggplot(aes(var1, var2, fill = correlation)) + geom_tile() + 
+    scale_fill_gradient2(low = &quot;red&quot;, mid = &quot;white&quot;, high = &quot;blue&quot;) + 
+    geom_text(aes(label = round(correlation, 2)), color = &quot;black&quot;, 
+        size = 2) + theme(axis.text.x = element_text(angle = 90, 
+    hjust = 1)) + coord_fixed()</code></pre>
+<p><img src="../../project/project1_files/figure-html/unnamed-chunk-20-1.png" width="672" style="display: block; margin: auto;" /> I then created a correlation heat map based off of the numeric variables in my data.</p>
+<pre class="r"><code># ggplot
+
+# Readjustment of table
+pg_data &lt;- full_data
+pg_data[5:9] &lt;- NULL
+pg_data[6] &lt;- NULL
+pg_data_long &lt;- pg_data %&gt;% pivot_longer(c(5:7), names_to = &quot;Stat&quot;, 
+    values_to = &quot;Value&quot;)
+
+# The basic per game statistics for every teams players from
+# the 2014 and 2015 NBA drafts
+ggplot(pg_data_long, aes(x = Tm, y = Value, fill = Stat), stat = &quot;summary&quot;, 
+    fun = mean) + geom_col(position = &quot;dodge&quot;) + theme(axis.text.x = element_text(angle = 45, 
+    hjust = 1)) + theme(panel.background = element_rect(fill = &quot;lightblue&quot;, 
+    colour = &quot;lightblue&quot;, size = 0.5, linetype = &quot;solid&quot;), panel.grid.major = element_line(size = 0.5, 
+    linetype = &quot;solid&quot;, colour = &quot;white&quot;), panel.grid.minor = element_line(size = 0.25, 
+    linetype = &quot;solid&quot;, colour = &quot;white&quot;)) + ggtitle(&quot;Mean Per Gme Statistics for Each Team&quot;) + 
+    xlab(&quot;Team&quot;) + ylab(&quot;Count&quot;)</code></pre>
+<p><img src="../../project/project1_files/figure-html/unnamed-chunk-21-1.png" width="672" style="display: block; margin: auto;" /> This graph displays the mean ppg, apg, and rpg for all players from each team. Some interesting findings include that the Cleveland Cavaliers, Minesota Timberwolves, Philadelphia 76ers, and Phoenix Suns all had exceptional production in points from their 2014 and 2015 NBA draft picks. The Lakers, Timberwolves, and 76ers also had exceptional rebounders, while the Pistons, 76ers and Suns had exceptional assisters.</p>
+<pre class="r"><code># Superstar dataframe containing all players with a
+# probability of becoming a superstar of 8% or higher and
+# their various statistics
+superstars_data &lt;- full_data %&gt;% group_by(Player) %&gt;% filter(superstar &gt; 
+    0.08)
+superstars_data[3] &lt;- NULL
+superstars_data &lt;- superstars_data %&gt;% unite(Tm, Player, Position, 
+    col = &quot;Player_info&quot;, sep = &quot;/&quot;)
+
+ggplot(superstars_data, aes(superstar, WS.48, color = Player_info)) + 
+    geom_point(size = 3) + geom_hline(yintercept = 0.1) + scale_y_continuous(breaks = seq(0, 
+    0.2, 0.01)) + scale_x_continuous(breaks = seq(0.08, 0.2, 
+    0.005)) + theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+    theme(panel.background = element_rect(fill = &quot;lightblue&quot;, 
+        colour = &quot;lightblue&quot;, size = 0.5, linetype = &quot;solid&quot;), 
+        panel.grid.major = element_line(size = 0.5, linetype = &quot;solid&quot;, 
+            colour = &quot;white&quot;), panel.grid.minor = element_line(size = 0.25, 
+            linetype = &quot;solid&quot;, colour = &quot;white&quot;)) + ggtitle(&quot;Superstar probability vs. Win Shares per 48 Minutes played&quot;) + 
+    xlab(&quot;Superstar Probability&quot;) + ylab(&quot;Win Shares per 48 Minutes Played&quot;)</code></pre>
+<p><img src="../../project/project1_files/figure-html/unnamed-chunk-22-1.png" width="672" style="display: block; margin: auto;" /> This data illustrates the relationship for superstar probability and win share per 48 minutes played, a metric associated with how much a player helps his team win games, for all players I deemed likely superstar prospects (probability of 8% or higher). The horizontal line is a value I determined to be the minimum WS.48 needed to be classified as a superstar level impact based on current and former superstars and their WS.48. Among these superstars, KAT and &quot;The Process&quot; were the only ones to superass this minimum requirement. Interestingly both players ranked highly on their superstar probability.</p>
+</div>
+<div id="dimensionality-reduction" class="section level1">
+<h1>Dimensionality Reduction</h1>
+<div id="pam" class="section level3">
+<h3>PAM</h3>
+<pre class="r"><code>clust_dat &lt;- full_data %&gt;% dplyr::select_if(is.numeric)
+pam_dat &lt;- full_data %&gt;% select_if(is.numeric)
+nba_width &lt;- vector()
+# Created the empty vector
+for (i in 2:10) {
+    pam_fit &lt;- pam(pam_dat, k = i)
+    nba_width[i] &lt;- pam_fit$silinfo$avg.width
+}
+ggplot() + geom_line(aes(x = 1:10, y = nba_width)) + scale_x_continuous(name = &quot;k&quot;, 
+    breaks = 1:10)</code></pre>
+<p><img src="../../project/project1_files/figure-html/unnamed-chunk-23-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code># This plot shows the clusters.
+pam1 &lt;- clust_dat %&gt;% pam(k = 2)
+plot(pam1, which = 2)</code></pre>
+<p><img src="../../project/project1_files/figure-html/unnamed-chunk-23-2.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code># This plot also shows the clusters but with values.</code></pre>
+<p>Using the Silhouette width which indexes how cohesive and separated clusters are simultaneously, I was able to determine that my data likely had 2 clusters. Using this information, I created several visualization using this 2 cluster model. One of my peaks had a silhouette width of 0.62 which falls within the reasonable structure area, while the other had a silhouette width of 0.41. Althought this second peak falls within the weak structure/possible artifical region, I still classified my data as having two clusters.</p>
+<pre class="r"><code>final &lt;- full_data %&gt;% select_if(is.numeric) %&gt;% scale %&gt;% as.data.frame
+pam2 &lt;- final %&gt;% pam(2)
+
+
+final &lt;- final %&gt;% mutate(cluster = as.factor(pam2$clustering))
+
+ggplot(final, aes(x = BPM, y = WS.48, color = superstar, shape = cluster)) + 
+    geom_point() + scale_color_viridis(option = &quot;plasma&quot;) + ggtitle(&quot;PAM Plot&quot;) + 
+    xlab(&quot;BPM&quot;) + ylab(&quot;Win Share/48 minutes&quot;)</code></pre>
+<p><img src="../../project/project1_files/figure-html/unnamed-chunk-24-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>final %&gt;% plot_ly(x = ~BPM, y = ~WS.48, z = ~superstar, color = ~cluster, 
+    type = &quot;scatter3d&quot;, mode = &quot;markers&quot;)</code></pre>
+<p><div id="htmlwidget-1" style="width:672px;height:480px;" class="plotly html-widget"></div>
+<script type="application/json" data-for="htmlwidget-1">{"x":{"visdat":{"1810f4833c924":["function () ","plotlyVisDat"]},"cur_data":"1810f4833c924","attrs":{"1810f4833c924":{"x":{},"y":{},"z":{},"mode":"markers","color":{},"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter3d"}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"scene":{"xaxis":{"title":"BPM"},"yaxis":{"title":"WS.48"},"zaxis":{"title":"superstar"}},"hovermode":"closest","showlegend":true},"source":"A","config":{"showSendToCloud":false},"data":[{"x":[2.75427514804829,-0.143543242809071,0.721477172372232,0.418720027058776,-0.100292222050006,0.937732276167557,0.159213902504385,0.591724110095036,0.634975130854101,-0.0137901805318759,1.58649758755353,0.11596288174532,0.37546900629971,0.678226151613166,0.461971047817841,1.80275269134886,0.937732276167557,0.548473089335971,0.505222068576906,-0.532802429640657,0.548473089335971,-0.143543242809071,0.332217985540645,2.53802004425297,0.678226151613166,0.548473089335971,0.461971047817841,-0.359798346604397,0.461971047817841,-0.186794263568136,0.418720027058776,0.591724110095036,0.28896696478158,0.461971047817841,0.37546900629971,1.28374044224008,0.37546900629971,0.851230234649427,0.28896696478158,1.28374044224008,0.37546900629971],"y":[2.43984882438626,-0.00362491825337375,0.939132667489476,0.284974342688315,-0.311464129924509,1.17001207624283,0.150294687582193,0.0540949339349638,0.227254490499977,0.188774589041085,1.20849197770172,0.208014539770531,0.381174096335544,0.535093702171112,1.68949074593787,2.28592921855069,1.80493045031454,0.361934145606099,0.746733160195017,-0.369183982112846,0.573573603630004,-0.503863637218968,0.131054736852748,1.95885005615011,0.381174096335544,0.304214293417761,0.381174096335544,0.169534638311639,-0.138304573359495,0.227254490499977,-0.330704080653955,0.554333652900558,0.208014539770531,0.342694194876653,-0.0998246719006034,0.939132667489476,0.342694194876653,0.727493209465571,0.535093702171112,2.09352971125623,-0.292224179195063],"z":[2.77767321620043,0.836704880178724,0.540590138300866,-0.490409721698562,1.4699608962262,0.0889024837890326,-0.0905433695318988,1.21060607837357,-0.471300180187544,-0.63201700346257,-0.594225546008845,-0.581702510184991,-0.289513169398325,0.0323281187856896,-0.450042710284794,-0.562236473661251,-0.652763543120496,-0.658527644827494,-0.64491021423377,-0.375318109185898,-0.661877518818393,2.15110158373057,1.59684303000371,3.11201490195828,1.80357338531963,3.51121272388702,1.43690348734241,1.86482682393176,-0.171677607013966,-0.446621935438702,0.174402075185124,-0.318634202616503,1.09068846056625,-0.600522833376695,-0.63305828639671,-0.3384081652806,-0.661877518818393,-0.488405407098109,-0.44665894272453,-0.661877518818393,-0.651982485211393],"mode":"markers","type":"scatter3d","name":"1","marker":{"color":"rgba(102,194,165,1)","line":{"color":"rgba(102,194,165,1)"}},"textfont":{"color":"rgba(102,194,165,1)"},"error_y":{"color":"rgba(102,194,165,1)"},"error_x":{"color":"rgba(102,194,165,1)"},"line":{"color":"rgba(102,194,165,1)"},"frame":null},{"x":[-0.576053450399723,-0.186794263568136,-1.3545718240629,0.0727118609862544,0.0727118609862544,-1.18156774102663,-0.186794263568136,-0.403049367363462,-1.39782284482196,-1.52757590709916,-1.3545718240629,-0.619304471158788,-1.87358407317168,-0.792308554195048,-0.792308554195048,-0.446300388122527,1.41349350451727,-1.00856365799037,-0.835559574954114,-0.532802429640657,-1.87358407317168,-2.13309019772607,-0.576053450399723,-1.52757590709916,-1.78708203165355,-1.52757590709916,-0.230045284327202,-0.749057533435983],"y":[-0.850182750348994,-0.407663883571738,-1.67750063171517,0.246494441229423,0.0733348846644097,-0.330704080653955,-0.369183982112846,-0.311464129924509,-0.388423932842292,-1.65826068098572,-1.04258225764345,-0.811702848890103,-1.71598053317406,-0.465383735760076,-0.850182750348994,0.727493209465571,-0.00362491825337375,-0.946382503996224,-0.773222947431211,-0.773222947431211,-2.10077954776298,-1.73522048390351,-0.792462898160657,-2.65873811891691,-1.23498176493791,-1.23498176493791,-0.426903834301184,0.0156150324760719],"z":[1.06853212197414,-0.418641032891224,-0.134417344484339,-0.440038262723074,-0.638242215950986,-0.624318033241146,-0.556912018509892,-0.494281296330573,-0.625028802829441,-0.661877518818393,-0.627755933527783,-0.246207422178076,-0.651474285849041,0.147178316183424,0.30328951893147,-0.470738256455076,0.655667177599594,-0.543318655413089,-0.660497693233497,-0.589176858942571,-0.656839678715206,-0.616146901097086,-0.661877518818393,-0.448212100227338,-0.644343977238333,-0.59180835770988,-0.65181625869236,-0.643916377192288],"mode":"markers","type":"scatter3d","name":"2","marker":{"color":"rgba(141,160,203,1)","line":{"color":"rgba(141,160,203,1)"}},"textfont":{"color":"rgba(141,160,203,1)"},"error_y":{"color":"rgba(141,160,203,1)"},"error_x":{"color":"rgba(141,160,203,1)"},"line":{"color":"rgba(141,160,203,1)"},"frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.2,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script> The pam plot illustrates the relationship between win shares per 48 minutes played and box plus minus.The shapes on the plot illustrates the two different clusters, while the color of the plots indicates the level of superstar probability. The plot_ly graph allows you to visualize the third variable (superstar probability) on a graphical scale rather than as the color of the plots themselves, allowing for an alternative means of expressing the data. Based off of this data, I concluded that a player's box plus-minus stats are positively correlated to their win shares per 48 minutes played. Essentially, a players ability to play offense and defense successfully is positively correlated with their ability to help their team win games. On the other hand, a player's superstar probability has no significant relatioship to both BPM and to WS.48.</p>
+<p>FIN.</p>
+<p>Note that the <code>echo = FALSE</code> parameter was added to the code chunk to prevent printing of the R code that generated the plot.</p>
+</div>
+</div>
+
+            
+        <hr>         <div class="related-posts">
+                <h5>Related Posts</h5>
+                
+              </div> 
+            </div>
+          </div>
+
+   <hr>  <div class="disqus">
+  <div id="disqus_thread"></div>
+  <script type="text/javascript">
+
+    (function() {
+      
+      
+      if (window.location.hostname == "localhost")
+        return;
+
+      var disqus_shortname = '';
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  <a href="http://disqus.com/" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</div> 
+        </div>
+      </div>
+    </div>
+
+    
+    <footer>
+  <div id="footer">
+    <div class="container">
+      <p class="text-muted">&copy; All rights reserved. Powered by <a href="https://gohugo.io/">Hugo</a> and
+      <a href="http://www.github.com/nurlansu/hugo-sustain/">sustain</a> with ♥</p>
+    </div>
+  </div>
+</footer>
+<div class="footer"></div>
+
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+<script src="../../js/docs.min.js"></script>
+<script src="../../js/main.js"></script>
+
+<script src="../../js/ie10-viewport-bug-workaround.js"></script>
+
+
+    
+  </body>
+</html>

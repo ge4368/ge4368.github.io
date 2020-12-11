@@ -1,0 +1,349 @@
+---
+title: "Project 1"
+author: "Gregory Estrera ge4368"
+date: '2020-10-05'
+output:
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
+    
+  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, fig.align = "center", warning = F, message = F,
+tidy=TRUE, tidy.opts=list(width.cutoff=60), R.options=list(max.print=100))
+```
+
+![](/img/tim_duncan.jpg) ![](/img/tim_duncan.jpg) ![](/img/tim_duncan.jpg) 
+
+# Introduction
+
+The datasets utilized for this project include a variety of information and statistics about the NBA Draft classes of 2014 and 2015. The dataset titled “nba_draft_2015” was found within the “Fivethirtyeight” package on r and displays theoretical statistical data on members of the 2001-2015 NBA draft classes. Data includes probability on becoming a superstar, starter, role player, and bust among other pieces of information. The other dataset titled “nba_draftclass_2014_2015_stats” contains the current career statistics of the players from the 2014 and 2015 NBA draft classes. This data includes player statistics such as points, games played, minutes played, assists, rebounds, etc. The dataset was compiled from the basketball reference website. [Link](https://www.basketball-reference.com/)   
+
+These datasets intrigued me because basketball is one of my favorite sports to play and to watch. Also, the datasets chosen display information on how the NBA analytical team rated players in the past compared to how those players ended up performing in the future. By dissecting the overlapping players we can see how accurate the predictions were and if any of these predictions were relatively correct or flat out wrong.
+
+
+
+### Libraries
+This section contains a record of the packages and datasets used for this project.
+
+```{r}
+library(tidyverse)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(cluster)
+library(viridis)
+library(GGally)
+library(plotly)
+library("fivethirtyeight")
+data("nba_draft_2015")
+nba_draftclass_2014_2015_stats <- read.csv("~/Website/content/project/nba_draftclass_2014_2015_stats.csv")
+```
+
+# Untidying/Tidying
+The datasets used were already tidy so the following section displays the practice of untidying and tidying.
+
+```{r}
+untidy_nba_draft_2015 <- nba_draft_2015 %>% pivot_wider(names_from = projected_spm, values_from = position)
+```
+Pivoting wider took an already tidy data set and proceed to create new column based off of the values in the "projected_spm" column, filling the values with the positions of the players
+
+```{r}
+tidy1 = untidy_nba_draft_2015%>% pivot_longer(cols=-(player:bust), names_to = "projected_spm")
+glimpse(tidy1)
+tidy2 = na.omit(tidy1)
+names(tidy2)[9]<-"position"
+```
+To reverse the untidying step, I needed to conduct a pivot longer to remove the excess columns created from the previous step. By pivoting all columns except those from players:bust, and naming this new column "projected_spm", I was able to re-tidy the data. Na.omit removed the many na values created from consecutive pivoting and a simple name() function renamed the values column created from pivoting longer.
+
+```{r}
+untidy_nba_draft_2014_2015_stats <- nba_draftclass_2014_2015_stats %>% pivot_wider(names_from = Rk, values_from = Pk)
+tidy3 = untidy_nba_draft_2014_2015_stats%>% pivot_longer(cols=-(Tm:VORP), names_to = "Rk")
+glimpse(tidy3)
+tidy4 = na.omit(tidy3)
+names(tidy4)[22] <- "Pk"
+```
+I conducted a similar process on the other dataset.
+
+
+# Joining
+
+When joining my two data sets, I chose to use a left join. The left join is designed to merge the datasets only on values present in the dataset on the "left". For me, this was the "tidy4" dataset based off of the career statistics for players from the 2014 and 2015 NBA draft classes. The left join was necessary because the "right" dataset, based off of the NBA draft classes from 2001-2015 contained too many players that would not be present in the "left" dataset.
+
+Essentially, all players from the 2001-2013 NBA draft classes were dropped because they were not included in the statistics dataset. This would prevent the creation of many new columns that would not contain any data.
+
+
+```{r}
+full_data <-left_join(tidy4,tidy2, by=c("Player"="player"))
+```
+
+### Cleaning up columns
+The two datasets chosen contained many numerical and categorical variables that made them overwhelming to work with. In order to make working with the data more managable, I narrowed down the scope of the data, only choosing the columns that interested me. 
+```{r}
+full_data[13:16] <- NULL
+full_data[17] <- NULL
+full_data[18:19] <- NULL
+full_data[4] <- NULL
+full_data[19:21] <- NULL
+full_data = na.omit(full_data)
+names(full_data)[19] <- "Position"
+full_data[9:11] <- NULL
+full_data[12:13]<-NULL
+full_data <- full_data[c(1,2,3,14,4,5,6,7,8,9,10,11,12,13)]
+
+```
+
+# Wrangling
+```{r}
+#creation of per game statistics
+full_data <- full_data %>% mutate(ppg=PTS/G)
+full_data <- full_data %>% mutate(mpg=MP/G)
+full_data <- full_data %>% mutate(rpg=TRB/G)
+full_data <- full_data %>% mutate(apg=AST/G)
+full_data[5:9]<-NULL
+```
+I mutated four new columns pased off of per game statistics.
+
+```{r}
+#statistic leaders/losers per game
+full_data %>% filter(mpg==max(mpg)) %>% select(Player,mpg)
+full_data %>% filter(mpg==min(mpg))%>% select(Player,mpg)
+
+full_data %>% filter(ppg==max(ppg))%>% select(Player,ppg)
+full_data %>% filter(ppg==min(ppg))%>% select(Player,ppg)
+
+full_data %>% filter(apg==max(apg))%>% select(Player,apg)
+full_data %>% filter(apg==min(apg))%>% select(Player,apg)
+
+full_data %>% filter(rpg==max(rpg))%>% select(Player,rpg)
+full_data %>% filter(rpg==min(rpg))%>% select(Player,rpg)
+```
+I found the statistic leaders and loser for the newly created per game statistics. The mpg leader is Andrew Wiggins with 35.78 minutes per game. The ppg leader is joel embiid with 23.95 points per game. The apg leader is Elfrid Payton with 6.63 assist per game. The rpg leader is Kat with 11.76 rebounds per game. Russ Smith was at the bottom of mpg, ppg, and rpg with 4.85, 1.96, 0.56 respectively. Chris McCullough was the bottom of apg with 0.25 assist per game.
+
+```{r}
+#superstar probability
+full_data %>% filter(superstar==max(superstar)) %>%select(Player,superstar)
+
+#starter probability
+full_data %>% filter(starter==max(starter))%>% select(Player,starter)
+
+```
+I then found the players with the highest probability of becoming a superstar and starter. Marcus Smart had the highest probability of becoming a superstar with a 16.35% chance. Justise Winslow had the highest probilibty of becoming a starter with a 51.09% chance.
+
+```{r}
+#Players per college
+full_data %>% group_by(College) %>% 
+  select(Player) %>%
+  summarise_all(n_distinct) %>%
+  arrange(desc(Player))
+```
+I found the number of players hailing from each college and ranked them in descending order.
+
+```{r}
+#Players per Team
+full_data %>% group_by(Tm) %>% 
+  select(Player) %>%
+  summarise_all(n_distinct) %>%
+  arrange(desc(Player))
+```
+I found the sum of the of players each team drafted in the 2014 and 2015 drafts.
+
+```{r}
+#mean statistics for the players from a specific college, all players coming from the 2014 or 2015 NBA draft
+full_data %>% group_by(College) %>% 
+  summarize(mean_ppg=mean(ppg,na.rm=T)) %>%
+  arrange(desc(mean_ppg))
+
+full_data %>% group_by(College) %>% 
+  summarize(mean_mpg=mean(mpg,na.rm=T)) %>%
+  arrange(desc(mean_mpg))
+
+full_data %>% group_by(College) %>% 
+  summarize(mean_apg=mean(apg,na.rm=T)) %>%
+  arrange(desc(mean_apg))
+
+full_data %>% group_by(College) %>% 
+  summarize(mean_rpg=mean(rpg,na.rm=T)) %>%
+  arrange(desc(mean_rpg))
+```
+I found the mean statistics of all the players from a specific college and grouped by that college.
+
+```{r}
+#max statistics for players from a specific team, all players coming from the 2014 or 2015 NBA draft
+full_data %>% group_by(Tm) %>% 
+  summarize(max(ppg)) 
+
+full_data %>% group_by(Tm) %>% 
+  summarize(max(mpg))
+
+full_data %>% group_by(Tm) %>% 
+  summarize(max(apg))
+
+full_data %>% group_by(Tm) %>% 
+  summarize(max(rpg))
+```
+I grouped by team and then found the highest per game statistics per team.
+
+```{r}
+#All players who have averaged greater than 10 ppg, 3 apg, 2rpg
+full_data %>% group_by(Player)%>%
+  select(Tm,Player,ppg,apg,rpg,Position,superstar)%>%
+  filter(ppg>10)%>%
+  filter(apg>3) %>%
+  filter(rpg>2)
+```
+I grouped by player and found the individuals who averaged 10 points per game, 3 assist per game, and 2 rebounds per game over their careers.
+
+```{r}
+#All players with a superstar probability of 8% or higher
+full_data %>% group_by(Player)%>%
+  select(Player,superstar,ppg,apg,rpg,Position)%>%
+  filter(superstar>0.08)%>%
+  arrange(desc(superstar))
+```
+I grouped by Player, and chose those who had an 8% probability of becoming a superstar, then ranked the players by their superstar rating.
+
+```{r}
+#Position leaders in ppg, apg, rpg
+full_data %>% group_by(Position)%>%
+  select(Player, Position, ppg)%>%
+  top_n(1,ppg) 
+
+full_data %>% group_by(Position)%>%
+  select(Player, Position, apg)%>%
+  top_n(1,apg) 
+
+full_data %>% group_by(Position)%>%
+  select(Player, Position, rpg)%>%
+  top_n(1,rpg) 
+```
+I grouped by position and found the statistic leaders in ppg, apg, and rpg.
+
+```{r}
+#Median Statistics of Players with a superstar value > 8% 
+full_data %>% filter(superstar>0.08)%>%
+    summarize(med.ppg=median(ppg),med.apg=median(apg),med.rpg=median(rpg))
+```
+I filtered my data by selecting only players with a 8% probability of becoming a superstar, then found the median per game statistics for those players.
+
+```{r}
+#Eeach teams highest probability of being a superstar player for each position
+full_data %>% group_by(Tm,Position)%>%
+  select(Player,Tm,Position,superstar) %>% 
+  top_n(1,superstar)
+```
+I found the players with the highest probability of becoming a superstar with the limit of one player per position per team.
+
+```{r}
+#Correlation Matrix
+cormat <- full_data %>% select_if(is.numeric) %>% cor(use="pair")
+```
+I created correlation matrix based off of all the numeric values in my dataset.
+
+#Visualization
+
+```{r}
+#Correlation Heatmap
+tidycor <- cormat %>% as.data.frame %>% rownames_to_column("var1") %>%
+pivot_longer(-1,names_to="var2",values_to="correlation")
+
+tidycor%>%ggplot(aes(var1,var2,fill=correlation))+
+  geom_tile()+
+  scale_fill_gradient2(low="red",mid="white",high="blue")+ 
+  geom_text(aes(label=round(correlation,2)),color = "black", size = 2)+ 
+  theme(axis.text.x = element_text(angle = 90, hjust=1))+ 
+  coord_fixed()
+```
+I then created a correlation heat map based off of the numeric variables in my data.
+```{r}
+#ggplot
+
+#Readjustment of table
+pg_data<-full_data
+pg_data[5:9] <- NULL
+pg_data[6] <- NULL
+pg_data_long<- pg_data %>% pivot_longer(c(5:7), names_to="Stat", values_to="Value")
+
+#The basic per game statistics for every teams players from the 2014 and 2015 NBA drafts
+ggplot(pg_data_long, aes(x = Tm, y = Value, fill = Stat),stat="summary", fun=mean) +
+  geom_col(position = "dodge")+
+  theme(axis.text.x = element_text(angle=45, hjust=1))+
+  theme(panel.background = element_rect(fill = "lightblue",
+                                colour = "lightblue",
+                                size = 0.5, linetype = "solid"),
+  panel.grid.major = element_line(size = 0.5, linetype = 'solid',
+                                colour = "white"), 
+  panel.grid.minor = element_line(size = 0.25, linetype = 'solid',
+                                colour = "white"))+
+  ggtitle("Mean Per Gme Statistics for Each Team")+xlab("Team")+ylab("Count")
+  
+```
+This graph displays the mean ppg, apg, and rpg for all players from each team. Some interesting findings include that the Cleveland Cavaliers, Minesota Timberwolves, Philadelphia 76ers, and Phoenix Suns all had exceptional production in points from their 2014 and 2015 NBA draft picks. The Lakers, Timberwolves, and 76ers also had exceptional rebounders, while the Pistons, 76ers and Suns had exceptional assisters. 
+
+```{r}
+#Superstar dataframe containing all players with a probability of becoming a superstar of 8% or higher and their various statistics
+superstars_data<-full_data %>% group_by(Player)%>%
+  filter(superstar>0.08)
+superstars_data[3] <- NULL
+superstars_data<-superstars_data %>% unite(Tm,Player,Position, col="Player_info",sep="/")
+
+ggplot(superstars_data, aes(superstar, WS.48, color=Player_info))+
+  geom_point(size=3)+
+  geom_hline(yintercept=0.1)+
+  scale_y_continuous(breaks=seq(0,0.2,0.01))+
+   scale_x_continuous(breaks=seq(0.08,0.20,.005))+
+   theme(axis.text.x = element_text(angle=45, hjust=1))+
+  theme(panel.background = element_rect(fill = "lightblue",
+                                colour = "lightblue",
+                                size = 0.5, linetype = "solid"),
+  panel.grid.major = element_line(size = 0.5, linetype = 'solid',
+                                colour = "white"), 
+  panel.grid.minor = element_line(size = 0.25, linetype = 'solid',
+                                colour = "white"))+
+    ggtitle("Superstar probability vs. Win Shares per 48 Minutes played")+xlab("Superstar Probability")+ylab("Win Shares per 48 Minutes Played")
+```
+This data illustrates the relationship for superstar probability and win share per 48 minutes played, a metric associated with how much a player helps his team win games, for all players I deemed likely superstar prospects (probability of 8% or higher). The horizontal line is a value I determined to be the minimum WS.48 needed to be classified as a superstar level impact based on current and former superstars and their WS.48. Among these superstars, KAT and "The Process" were the only ones to superass this minimum requirement. Interestingly both players ranked highly on their superstar probability. 
+
+#Dimensionality Reduction
+###PAM
+
+```{r}
+clust_dat<-full_data%>%dplyr::select_if(is.numeric)
+pam_dat<-full_data%>%select_if(is.numeric)
+nba_width<-vector()
+#Created the empty vector
+for(i in 2:10){
+  pam_fit <- pam(pam_dat, k = i)
+  nba_width[i] <- pam_fit$silinfo$avg.width
+}
+ggplot()+geom_line(aes(x=1:10,y=nba_width))+scale_x_continuous(name="k",breaks=1:10)
+#This plot shows the clusters.
+pam1 <- clust_dat %>% pam(k=2) 
+plot(pam1,which=2)
+#This plot also shows the clusters but with values.
+```
+Using the Silhouette width which indexes how cohesive and separated clusters are
+simultaneously, I was able to determine that my data likely had 2 clusters. Using this information, I created several visualization using this 2 cluster model. One of my peaks had a silhouette width of 0.62 which falls within the reasonable structure area, while the other had a silhouette width of 0.41. Althought this second peak falls within the weak structure/possible artifical region, I still classified my data as having two clusters. 
+
+```{r}
+final <- full_data %>% select_if(is.numeric) %>% scale %>% as.data.frame
+pam2 <- final %>% pam(2)
+
+
+final <- final %>% mutate(cluster=as.factor(pam2$clustering))
+
+ggplot(final, aes(x=BPM,y=WS.48, color=superstar,shape=cluster))+
+    geom_point()+scale_color_viridis(option="plasma") + ggtitle("PAM Plot")+
+    xlab("BPM")+ylab("Win Share/48 minutes")
+
+final%>%plot_ly(x= ~BPM,  y = ~WS.48, z = ~superstar, color= ~cluster, type = "scatter3d", mode = "markers")
+
+
+```
+The pam plot illustrates the relationship between win shares per 48 minutes played and box plus minus.The shapes on the plot illustrates the two different clusters, while the color of the plots indicates the level of superstar probability. The plot_ly graph allows you to visualize the third variable (superstar probability) on a graphical scale rather than as the color of the plots themselves, allowing for an alternative means of expressing the data. Based off of this data, I concluded that a player's box plus-minus stats are positively correlated to their win shares per 48 minutes played. Essentially, a players ability to play offense and defense successfully is positively correlated with their ability to help their team win games. On the other hand, a player's superstar probability has no significant relatioship to both BPM and to WS.48. 
+
+FIN.
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

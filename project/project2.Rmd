@@ -1,0 +1,324 @@
+---
+title: 'Project 2: Modeling, Testing, and Predicting'
+author: "Gregory Estrera ge4368"
+date: '2020-11-25'
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r global_options, include=FALSE}
+#LEAVE THIS CHUNK ALONE!
+library(knitr)
+opts_chunk$set(fig.align="center", fig.height=5, message=FALSE, warning=FALSE, fig.width=8, tidy.opts=list(width.cutoff=60),tidy=TRUE)
+
+#HERE'S THE CLASSIFICAITON DIAGNOSTICS FUNCTION
+class_diag<-function(probs,truth){
+  tab<-table(factor(probs>.5,levels=c("FALSE","TRUE")),truth)
+  acc=sum(diag(tab))/sum(tab)
+  sens=tab[2,2]/colSums(tab)[2]
+  spec=tab[1,1]/colSums(tab)[1]
+  ppv=tab[2,2]/rowSums(tab)[2]
+  f1=2*(sens*ppv)/(sens+ppv)
+
+  if(is.numeric(truth)==FALSE & is.logical(truth)==FALSE){
+    truth<-as.numeric(truth)-1}
+  
+  #CALCULATE EXACT AUC
+  ord<-order(probs, decreasing=TRUE)
+  probs <- probs[ord]; truth <- truth[ord]
+  
+  TPR=cumsum(truth)/max(1,sum(truth)) 
+  FPR=cumsum(!truth)/max(1,sum(!truth))
+  
+  dup<-c(probs[-1]>=probs[-length(probs)], FALSE)
+  TPR<-c(0,TPR[!dup],1); FPR<-c(0,FPR[!dup],1)
+  
+  n <- length(TPR)
+  auc<- sum( ((TPR[-1]+TPR[-n])/2) * (FPR[-1]-FPR[-n]) )
+
+  data.frame(acc,sens,spec,ppv,f1,auc)
+}
+```
+
+
+#0.Introduction
+
+The dataset utilized in this project contains  all of the recorded in-game statistics of the professional gamers in the Overwtch League (OWL) for the 2019 season. The variables recorded include personal information about the players such as their "gamer tag"/username and the city and team they play for. In addition, the dataset also includes infromation on the role/position that each player focuses on. These include the roles of "Tank", "Damage", and "Support". The statistics included in this dataset record the individuals average eliminations, deaths, damage done, and healing done per ten minutes. Finally miscelanous statistics are recorded such as time played and whether or not the individual made the "Overwatch All-star Team".
+
+The statistical records for eliminations and deaths count how many eliminations and deaths the player procures in ten minutes. The statistical records for "damage done" and "healing done" are recorded based off of the "in-game" hp system. In total, there are 9 variables recorded for 92 professional Overwatch players.
+
+###Libraries
+
+```{r}
+library(tidyverse)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(cluster)
+library(viridis)
+library(GGally)
+library(vegan)
+library(sandwich)
+library(lmtest)
+library(plotROC)
+library(glmnet)
+library(rstatix)
+set.seed(1234)
+
+OWL_stats <- read.csv("~/Website/content/project/OWL_stats.csv")
+OWL_stats<-OWL_stats%>%select(-PLAYER,-TEAM)
+```
+
+#1. MANOVA
+
+```{r}
+
+#MANOVA
+man1<- manova(cbind(ELIM,DEATHS,DAMAGE,HEALING)~ROLE, data=OWL_stats)
+summary(man1) 
+
+#Univariate ANOVAs
+summary.aov(man1) #all 4 variables are significant
+OWL_stats%>% group_by(ROLE)%>%summarize(mean(ELIM), mean(DEATHS), mean(DAMAGE), mean(HEALING))
+
+pairwise.t.test(OWL_stats$ELIM, OWL_stats$ROLE,p.adj="none")
+pairwise.t.test(OWL_stats$DEATHS, OWL_stats$ROLE,p.adj="none")
+pairwise.t.test(OWL_stats$DAMAGE, OWL_stats$ROLE,p.adj="none")
+pairwise.t.test(OWL_stats$HEALING, OWL_stats$ROLE,p.adj="none")
+
+#Did 1 MANOVA, 4 ANOVAs, 12 t tests --> a = 0.05/17 = 0.002941176
+0.05/17
+
+#plot for T-test
+OWL_stats%>%select(ROLE,ELIM,DEATHS)%>%pivot_longer(-1,names_to='DV', values_to='measure')%>%
+  ggplot(aes(ROLE,measure,fill=ROLE))+geom_bar(stat="summary")+geom_errorbar(stat="summary", width=.5)+
+  facet_wrap(~DV, nrow=2)+coord_flip()+ylab("")+theme(legend.position = "none")
+
+OWL_stats%>%select(ROLE,DAMAGE,HEALING)%>%pivot_longer(-1,names_to='DV', values_to='measure')%>%
+  ggplot(aes(ROLE,measure,fill=ROLE))+geom_bar(stat="summary")+geom_errorbar(stat="summary", width=.5)+
+  facet_wrap(~DV, nrow=2)+coord_flip()+ylab("")+theme(legend.position = "none")
+
+#Assumption tests
+group <- OWL_stats$ROLE 
+DVs <- OWL_stats %>% select(ELIM,DEATHS,DAMAGE,HEALING)
+
+sapply(split(DVs,group), mshapiro_test)
+
+```
+*A one-way MANOVA was conducted to determine the effect of the Player Role (Tank,Damage,Support) on 4 dependent variables (Eliminations per ten minutes, Deaths per ten minutes, Damage per ten minutes, and Healing per ten minutes).*
+
+*Significant differences were found among the three Player Roles for at least one of the dependent variables, Pillai trace = 0.95496, pseudo F (8,174) = 19.875, p = 2.2e-16.*
+
+*Univariate ANOVAs for each dependent variable were conducted as follow-up tests to the MANOVA, using the Bonferroni method for controlling Type I error rates for multiple comparisons. The univariate ANOVAs for ELIM, DAMAGE, and HEALING were significant, F (2,89) = 35.094, p = 5.792e-12, F (2,89) = 26.309, p = 1.054e-09, and F (2,89) = 102.13, p = 2.2e-16 respectively. The univariate ANOVA for DEATHS was not significant, F (2,89) = 4.3933, p = 0.01515. *
+
+*Post hoc analysis was performed conducting pairwise comparisons to determine which Role differed in Elims, Deaths, Damage, and Healing. All three Roles were found to differ significantly from each other in terms of sepal length and petal width after adjusting for multiple comparisons (bonferroni α = 0.05/17 = 0.002941176).*
+
+*Assumptions for multivariate normality were violated due to p-value < 0.05; therefore, further assumption testing was halted* 
+
+#2. Randomization Test
+
+```{r}
+#Automatic
+dists<-OWL_stats%>%select(ELIM,DEATHS,DAMAGE,HEALING)%>%dist()
+adonis(dists~ROLE, data=OWL_stats) 
+
+OWL_stats%>%filter(ROLE=="D") #32 Damage players
+OWL_stats%>%filter(ROLE=="S") #31 Support players
+OWL_stats%>%filter(ROLE=="T") #29 Tank players
+
+
+#By Hand
+SST <- sum(dists^2)/92
+SSW <- OWL_stats%>%group_by(ROLE)%>%select(ROLE,ELIM,DEATHS,DAMAGE,HEALING)%>%
+  do(d=dist(.[2:3],"euclidean"))%>%ungroup()%>%
+  summarize(sum(d[[1]]^2)/32 + sum(d[[1]]^2)/31 + sum(d[[1]]^2)/29)%>%pull
+
+F_obs<-((SST-SSW)/2)/(SSW/89)
+
+Fs<-replicate(1000,{
+new<-OWL_stats%>%mutate(ROLE=sample(ROLE))
+  
+SSW<-new%>%group_by(ROLE)%>%select(ROLE,ELIM,DEATHS,DAMAGE,HEALING)%>%
+  do(d=dist(.[2:3],"euclidean"))%>%ungroup()%>%
+  summarize(sum(d[[1]]^2)/32 + sum(d[[1]]^2)/31 + sum(d[[1]]^2)/29)%>%pull
+
+((SST-SSW)/2)/(SSW/89)
+})
+
+{hist(Fs,prob=T); abline(v=F_obs, col="red", add=T)}
+mean(Fs>F_obs) #p-value very small: reject null hypothesis
+```
+
+*Null Hypothesis: All of the ROLEs have the same mean distance for their eliminations/10min, deaths/10min, damage/10min, and healing/10min. Althernative Hypothesis: All of the ROLEs do not have the same mean distance for their eliminations/10min, deaths/10min, damage/10min, and healing/10min.*
+
+*We can reject the null hypothesis because none of our 1000 F statistics generated under the null hypothesis were bigger than our actual F statistic (78.513); therefore, the p-value is effectively 0.*
+
+#3. Linear Regression
+
+
+```{r}
+fit<-lm(ELIM ~ DAMAGE * ROLE, data=OWL_stats); summary(fit) #linear reg model
+
+ggplot(OWL_stats, aes(DAMAGE, ELIM, color = ROLE)) +
+  geom_smooth(method = "lm", se = F, fullrange=T) + geom_point()
+```
+*The predictive value for eliminations for the reference group which in this case is gamers who play the role of "Damage" characters but also have zero "damge dealt" is 13.6807793 eliminations. For every one unit increase of damage done for "damage" role characters, the number of eliminations a player gets increases by 0.0004029 eliminations. Controlling for "damage dealt", gamers who play the role of support have 7.3510657 fewer eliminations than damage players. Controlling for "damage dealt", gamers who play the role of Tank have 6.1497689 more eliminations than damage players. For every unit of damage done, the numnber of eliminations increases by 0.0009173, for Support players specifically. For every unit of damage done, the numnber of eliminations decreases by 0.0008297, for Tank players specifically.*
+
+```{r}
+resids<-lm(ELIM~DAMAGE*ROLE, data=OWL_stats)$residuals
+ggplot()+geom_histogram(aes(resids)) #normality
+```
+*Based on this graph, the assumption for normality was met.*
+
+```{r}
+ggplot()+geom_qq(aes(sample=resids))+geom_qq_line(aes(sample=resids)) #linearity
+```
+*Based on this graph, the assumption for linearity was met.*
+
+```{r}
+resids<-fit$residuals
+fitvals<-fit$fitted.values
+ggplot()+geom_point(aes(fitvals,resids))+geom_hline(yintercept=0, color='red') #homoskedasticity
+
+bptest(fit)#accept null which is that it is homoskedastic (p-value=0.4333)
+```
+*Based on this graph, the assumption for homoskedasticity was met.*
+
+```{r}
+#uncorrected SE vs corrected SE
+coeftest(fit)
+coeftest(fit, vcov = vcovHC(fit))
+```
+
+*After recomputing with robust standard errors, there was an incease in the standard error values along with a decrease in p-values; thus, meaning that less variables were signifcant and that the variables that were significant went down in their level of significance. These larger standard errors make it more difficult to reject the null and accounts for extra noise.*
+
+```{r}
+#Proportion of variance explained
+pro_var = lm(ELIM~DAMAGE*ROLE, data=OWL_stats)
+summary(pro_var)$adj.r.squared 
+
+```
+*The proportion of variance explained by my model can be found by using the adjusted r squared value. This yielded a proportion of 0.6557611*
+
+#4. Bootstrapped SE
+
+```{r}
+#bootstrapped SEs
+samp_distn <- replicate(5000, {
+    boot_OWL_stats <- sample_frac(OWL_stats, replace = T)
+    fit <- lm(ELIM ~ DAMAGE * ROLE, data = boot_OWL_stats)
+    coef(fit)
+})
+
+samp_distn %>% t %>% as.data.frame %>% summarize_all(sd)
+
+```
+*After bootstrapping the new standard errors, we can see that the standard error values are very similar to those of the uncorrected standard errors in section 3. However, due to the randomization nature of bootstrapping the values fluctuate above and below the uncorrected standard errors. Unbootstrapped (1.5593, 0.000201, 1.8225, 2.6935, 0.0002677, 0.000386) - Bootstrapped (1.590145	0.0002099108	2.072299	2.603343	0.0003119648	0.0003715443). On the other hand, the robust standard errors are all higher than these bootstrapped values, meaning that the p-values for the robust would also be higher. Robust (1.6720215, 0.00022189, 2.201503, 2.482808, 0.00033323, 0.00035465). Essentially, bootstrapping produces similar but not exactly the same standard errors, p-values, and consequently signifance findings as the uncorrected regression but these values are consistently lower than the values found using robust standard errors. Robust standard errors still have the lowest likelihood of producing a false positive.*
+
+#5. Logistic Regression
+
+```{r}
+#Interpret coefficient estimates
+log_fit<-glm(All.star~DAMAGE+ROLE, family="binomial", data=OWL_stats)
+coeftest(log_fit)
+exp(coef(log_fit))
+
+#Confusion Matrix
+probs<-predict(log_fit,type="response")
+table(predict=as.numeric(probs>.5),truth=OWL_stats$All.star)%>%addmargins
+```
+*The predictive odds of becoming an "All-star" for a player who choose the damage role and also has 0 "damage dealt" is 0.01362687 (p-value=0.006643). There is a significant difference in predicted odds of becoming an "All-star" comparing Tank to Damage players, once we've accounted for "Damage Dealt" (p-value=0.032077). These odds of becoming an "All-star" for Tank players are e^1.40591367 = 4.079252 times the odds of Damage players. There is a not significant difference in predicted odds of becoming an "All-star" comparing Support to Damage players, once we've accounted for "Damage Dealt" (p-value=0.057025). There is also no significant effect of "damage dealt" on becoming an "All-star" after controlling for the "Role".*
+
+```{r}
+#Compute and discuss the Accuracy,(TPR), (TNR), (PPV), and AUC of your model
+class_diag(probs,OWL_stats$All.star)
+```
+*The model preformed poorly as shown from an AUC value of 0.6730769. From the confusion matrix, we can determine that the accuracy is 0.7282609, the sensitivity is 0.07692308, the specificity is 0.9848485, the precision is 0.6666667, and the auc value is 0.6730769. Based on the low accurcay, sensitivy, precision, and auc values, the total classification is pretty poor, the true positive rate is low, the positivec predicted value is low, and the model overall is a poor predictor. However, the high specificity means that the true negative raite is high.*
+
+```{r}
+#ggplot of density plot of log-odds
+logit_fit<-glm(All.star ~ DAMAGE+ROLE, data=OWL_stats,
+               family=binomial(link="logit"))
+OWL_stats$logit<-predict(logit_fit)
+ggplot(data=OWL_stats,aes(logit,fill=All.star))+
+  geom_density(alpha=.3)+geom_vline(xintercept=0,lty=2)
+
+#generate a ROC curve
+ROCplot<-ggplot(OWL_stats)+geom_roc(aes(d=All.star,m=probs), n.cuts=0) 
+
+ROCplot
+calc_auc(ROCplot)
+```
+
+*An Ideal ROC plot resembles a sharp right angle; however, my ROC plot looks like a slight curve, thus, reflecting the low auc value of 0.6730769 and the poor predicitivity of the model.*
+
+#6. Logistic Regression Part II
+
+```{r}
+#Fit model, compute in-sample classification diagnostics (Accuracy, Sensitivity, Specificity, Precision, AUC), and interpret 
+
+fit_all <- glm(All.star~., data=OWL_stats, family="binomial")
+prob_all<-predict(fit_all, type="response")
+class_diag(prob_all, OWL_stats$All.star)
+```
+*The model preformed poorly as shown from an AUC value of 0.6818182 From the confusion matrix, we can determine that the accuracy is 0.6956522, the sensitivity is 0.07692308, the specificity is 0.9393939, the precision is 0.3333333, and the auc value is 0.6818182 Based on the low accurcay, sensitivy, precision, and auc values, the total classification is pretty poor, the true positive rate is low, the positivec predicted value is low, and the the model overall is a poor predictor. However, the high specificity means that the true negative raite is high.*
+
+```{r}
+#Perform 10-fold (or repeated random sub-sampling) CV with the same model and report average out-of-sample classification diagnostics (Accuracy, Sensitivity, Specificity, Precision, and AUC); interpret AUC and compare with the in-sample metrics
+set.seed(1234)
+k=10
+
+data<-OWL_stats[sample(nrow(OWL_stats)),]
+folds<-cut(seq(1:nrow(OWL_stats)),breaks=k,labels=F) 
+diags<-NULL
+for(i in 1:k){
+train<-data[folds!=i,]
+test<-data[folds==i,]
+truth<-test$All.star
+fit2<-glm(All.star~.,data=train,family="binomial")
+probs2<-predict(fit2,newdata = test,type="response")
+diags<-rbind(diags,class_diag(probs2,truth))
+}
+summarize_all(diags,mean)
+```
+*The 10-fold CV model preformed poorly as shown from an AUC value of 0.5655556. We can determine that the accuracy is 0.6956522, the specificity is 0.7569048, and the auc value is 0.4625794 Based on the low accurcay, low specificity, and low auc, the total classification is pretty poor, the true negative raite is low, and the the model overall is a poor predictor.*
+
+```{r}
+#Perform LASSO on the same model/variables. Choose lambda to give the simplest model whose accuracy is near that of the best (i.e., lambda.1se). Discuss which variables are retained.
+set.seed(1234)
+y<-as.matrix(OWL_stats$All.star)
+x<-model.matrix(All.star~.,data=OWL_stats)[,-1]
+x<-scale(x)
+cv<-cv.glmnet(x,y,family="binomial")
+lasso<-glmnet(x,y,family="binomial",lambda=cv$lambda.1se)
+coef(lasso)
+
+OWL_stats2<-OWL_stats%>%mutate(ROLES=ifelse(All.star=="S",1,0))%>%
+  select(All.star,ROLES)
+```
+
+*Based off of the Lasso for this model, the variables that were retained are Intercept and ROLES.*
+
+```{r}
+#Perform 10-fold CV using only the variables lasso selected: compare model’s out-of-sample AUC to that of your logistic regressions above
+set.seed(1234)
+k=10
+
+data2<-OWL_stats2[sample(nrow(OWL_stats2)),]
+folds<-cut(seq(1:nrow(OWL_stats2)),breaks=k,labels=F) 
+diags<-NULL
+for(i in 1:k){
+  train<-data2[folds!=i,]
+  test<-data2[folds==i,]
+  truth<-test$All.star
+  fit3<-glm(All.star~ ROLES,data=train,family="binomial")
+  probs<-predict(fit3,newdata = test,type="response")
+  diags<-rbind(diags,class_diag(probs,truth))
+}
+summarize_all(diags,mean)
+```
+
+*The new 10-fold CV Lasso model preformed poorly as shown from an AUC value of 0.45 We can determine that the accuracy is 0.7166667 and the specificity is 1. Based on the low accurcay and the low auc the total classification is pretty poor and the model overall is a poor predictor. However, the high specificity means that the true negative raite is high. The 10-fold CV Lasso model has a lower overall auc but a higher acc and specificity. This means that the 10-fold CV Lasso is an overall worse predictor than the non-Lasso but it does have a higher total classification and a higher true negative raite.*
+
+

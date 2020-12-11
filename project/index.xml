@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Projects on Gregory Estrera</title>
+    <link>/project/</link>
+    <description>Recent content in Projects on Gregory Estrera</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-US</language>
+    <lastBuildDate>Wed, 25 Nov 2020 00:00:00 +0000</lastBuildDate><atom:link href="/project/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Project 2: Modeling, Testing, and Predicting</title>
+      <link>/project/project2/</link>
+      <pubDate>Wed, 25 Nov 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/project/project2/</guid>
+      <description>0.Introduction The dataset utilized in this project contains all of the recorded in-game statistics of the professional gamers in the Overwtch League (OWL) for the 2019 season. The variables recorded include personal information about the players such as their &amp;quot;gamer tag&amp;quot;/username and the city and team they play for. In addition, the dataset also includes infromation on the role/position that each player focuses on. These include the roles of &amp;quot;Tank&amp;quot;, &amp;quot;Damage&amp;quot;, and &amp;quot;Support&amp;quot;.</description>
+    </item>
+    
+    <item>
+      <title>Project 1</title>
+      <link>/project/project1/</link>
+      <pubDate>Mon, 05 Oct 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/project/project1/</guid>
+      <description>Introduction The datasets utilized for this project include a variety of information and statistics about the NBA Draft classes of 2014 and 2015. The dataset titled “nba_draft_2015” was found within the “Fivethirtyeight” package on r and displays theoretical statistical data on members of the 2001-2015 NBA draft classes. Data includes probability on becoming a superstar, starter, role player, and bust among other pieces of information.</description>
+    </item>
+    
+  </channel>
+</rss>

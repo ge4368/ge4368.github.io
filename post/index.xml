@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Posts on Gregory Estrera</title>
+    <link>/post/</link>
+    <description>Recent content in Posts on Gregory Estrera</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-US</language>
+    <lastBuildDate>Fri, 11 Dec 2020 00:00:00 +0000</lastBuildDate><atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Hard Tacos vs. Soft Tacos</title>
+      <link>/post/2020/12/11/stuff/</link>
+      <pubDate>Fri, 11 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2020/12/11/stuff/</guid>
+      <description>Why Not Both? A little girl once said &amp;ldquo;porque no los dos&amp;rdquo;. With these legendary words, she broke the universal misconception that we as humans must choose between two good things; that we are eternally damned to giving up one thing in order to have the other. Hard tacos vs soft tacos&amp;hellip; With that phrase that will be immortally etched into the fabric of time, we no longer have to choose between hard tacos and soft tacos.</description>
+    </item>
+    
+  </channel>
+</rss>
